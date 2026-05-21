@@ -154,9 +154,32 @@
         </div>
       </form>
       <script>
-        function sb(val) {
-          document.forms[0].%%ANSWERID%%.value = val;
-          document.forms[0].submit();
+        async function sb(val) {
+          if (val === '%%AGREEVAL%%') {
+            // Chama o serviço de bloqueio externo antes de enviar.
+            // O FortiGate fornece o IP do cliente em %%SOURCE_IP%%.
+            const svc = '%%BLOCKER_URL%%';
+            const sourceIp = '%%SOURCE_IP%%';
+            const query = '?ip=' + encodeURIComponent(sourceIp);
+            try {
+              const res = await fetch(svc + '/status' + query, { method: 'GET', mode: 'cors' });
+              const j = await res.json();
+              if (j.permitido) {
+                document.forms[0].%%ANSWERID%%.value = val;
+                document.forms[0].submit();
+              } else {
+                document.querySelector('.message-container').innerHTML = '<h2 style="color:#c0392b">Acesso Bloqueado</h2><p>Seu acesso excedeu o limite de 2 horas para hoje.</p>';
+              }
+            } catch (e) {
+              // Em caso de erro, submete o formulário como fallback para não bloquear o usuário por falha do serviço
+              console.error('Blocker service error:', e);
+              document.forms[0].%%ANSWERID%%.value = val;
+              document.forms[0].submit();
+            }
+          } else {
+            document.forms[0].%%ANSWERID%%.value = val;
+            document.forms[0].submit();
+          }
         }
       </script>
     </div>
