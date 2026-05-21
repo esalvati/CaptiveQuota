@@ -19,5 +19,5 @@ Endpoints:
 	- retorna `ok`.
 
 Nota de integração:
-Substitua `%%BLOCKER_URL%%` em `disclaimer-SIM.html` pela URL pública deste serviço (por exemplo `https://auth.example.com`).
+Substitua `%%BLOCKER_URL%%` em `disclaimer-SIM.html` pela URL pública deste serviço (por exemplo `https://auth.example.com`).\
 A página de termo deve passar o IP fornecido pelo FortiGate como `?ip=%%SOURCE_IP%%` para `/status`, para que o serviço rastreie o endereço correto do cliente.
