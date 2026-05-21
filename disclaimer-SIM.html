@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=8; IE=EDGE">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>
+      Firewall Disclaimer
+    </title>
+    
+    <style type="text/css">
+      body {
+        height: 100vh;
+        margin: 0;
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        color: #444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f5f7fa, #e9eef3);
+      }
+      
+      .message-container {
+        background: #fff;
+        width: 100%;
+        max-width: 600px;
+        padding: 2em 2.5em;
+        margin: 1em;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        text-align: center;
+      }
+      
+      .logo {
+        background: url(%%IMAGE:LogoSIM%%) no-repeat center center;
+        background-size: contain;
+        height: 120px;
+        margin-bottom: 1.5em;
+      }
+      
+      h1 {
+        color: #2f71b2;
+        margin-top: 0;
+        margin-bottom: 0.8em;
+        font-size: 1.6em;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      
+      p {
+        margin: 0.8em 0;
+        font-size: 0.95em;
+        line-height: 1.5;
+      }
+      
+      .text-scrollable {
+        overflow: auto;
+        height: 150px;
+        border: 1px solid #d0d0d0;
+        padding: 1em;
+        font-size: 0.95em;
+        line-height: 1.4;
+        background: #fafafa;
+        border-radius: 6px;
+        text-align: justify;
+      }
+      
+      .form-footer {
+        display: flex;
+        justify-content: center;
+        gap: 1em;
+        margin-top: 1.8em;
+      }
+      
+      button {
+        padding: 0.7em 1.8em;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        min-width: 100px;
+        font-size: 0.9em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+      }
+      
+      button.primary {
+        color: #fff;
+        background-color: #2f71b2;
+        border-color: #26669f;
+      }
+      
+      button.primary:hover {
+        background-color: #24629c;
+      }
+      
+      button:not(.primary) {
+        color: #444;
+        background-color: #f4f4f4;
+        border-color: #d0d0d0;
+      }
+      
+      button:not(.primary):hover {
+        background-color: #e7e7e7;
+      }
+      
+      input[type=text],
+      input[type=password],
+      select,
+      textarea {
+        border: 1px solid #aaa;
+        border-radius: 4px;
+        padding: 5px 8px;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0.3em 0;
+      }
+      
+      input:focus,
+      textarea:focus,
+      select:focus {
+        border-color: #2f71b2;
+        box-shadow: 0 0 3px rgba(47, 113, 178, 0.3);
+        outline: none;
+      }
+      
+      .text-container {
+        margin: 1em 0;
+      }
+      
+      .flex-container {
+        display: flex;
+      }
+      
+      .flex-container.column {
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  
+  <body>
+    
+    <div class="message-container">
+      
+      <div class="logo">
+      </div>
+      
+      <h1>
+        Termos de Acordo
+      </h1>
+      
+      <form action="%%DISCLAIMER_ACT%%" method="%%DISCLAIMER_METHOD%%">
+        <input type="hidden" name="%%REDIRID%%" value="%%PROTURI%%">
+        <input type="hidden" name="%%MAGICID%%" value="%%MAGICVAL%%">
+        <input type="hidden" name="%%ANSWERID%%" value="%%DECLINEVAL%%">
+        
+        <p class="text-scrollable text-container">
+          Bem-vindo (a) à SIM! O Wi-Fi está disponível por até 2 horas a partir do momento da conexão. Depois desse tempo, ele se desconecta automaticamente e só poderá ser acessado novamente no dia seguinte. O uso para atividades ilegais é proibido. Aproveite!
+        </p>
+        
+        <p>
+          <b>
+            Aceita o termo?
+          </b>
+        </p>
+        
+        <div class="form-footer">
+          <button class="primary" type="button" onclick="sb('%%AGREEVAL%%')">
+            Sim
+          </button>
+          <button type="button" onclick="sb('%%DECLINEVAL%%')">
+            Não
+          </button>
+        </div>
+      </form>
+      
+      <script>
+        async function sb(val) {
+          if (val === '%%AGREEVAL%%') {
+            // Chama o serviço de bloqueio externo antes de enviar.
+            // O FortiGate fornece o IP do cliente em %%SOURCE_IP%%.
+            const svc = '%%BLOCKER_URL%%';
+            const sourceIp = '%%SOURCE_IP%%';
+            const query = '?ip=' + encodeURIComponent(sourceIp);
+            try {
+              const res = await fetch(svc + '/status' + query, { method: 'GET', mode: 'cors' });
+              const j = await res.json();
+              if (j.permitido) {
+                document.forms[0].%%ANSWERID%%.value = val;
+                document.forms[0].submit();
+              } else {
+                document.querySelector('.message-container').innerHTML = '<h2 style="color:#c0392b">Acesso Bloqueado</h2><p>Seu acesso excedeu o limite de 2 horas para hoje.</p>';
+              }
+            } catch (e) {
+              // Em caso de erro, submete o formulário como fallback para não bloquear o usuário por falha do serviço
+              console.error('Blocker service error:', e);
+              document.forms[0].%%ANSWERID%%.value = val;
+              document.forms[0].submit();
+            }
+          } else {
+            document.forms[0].%%ANSWERID%%.value = val;
+            document.forms[0].submit();
+          }
+        }
+      </script>
+    </div>
+    
+  </body>
+  
+</html>
