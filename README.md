@@ -1,4 +1,4 @@
-# Serviço de bloqueio FortiGate de 2 horas
+# Serviço de bloqueio de disclaimer para FortiGate
 
 Este serviço rastreia IPs de clientes e aplica um limite de sessão de 2 horas a partir da primeira aceitação no dia.
 
