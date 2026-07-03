@@ -42,8 +42,6 @@ def novo_dia(ts1, ts2):
 
 
 def get_cliente_src():
-    print('request.args:', request.args)
-    print('request.remote_addr:', request.args.get('cliente_src'))
     return request.args.get('cliente_src') or request.remote_addr
 
 
