@@ -42,11 +42,13 @@ def novo_dia(ts1, ts2):
 
 
 def get_cliente_src():
+    print('request.args:', request.args)
+    print('request.remote_addr:', request.args.get('cliente_src'))
     return request.args.get('cliente_src') or request.remote_addr
 
 
 def get_fgt_hostname():
-    return request.args.get('fgt_hostname') or request.headers.get('FGT_HOSTNAME')
+    return request.args.get('fgt_hostname') or ''
 
 
 @app.route('/status', methods=['GET'])
