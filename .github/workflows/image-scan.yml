@@ -22,7 +22,7 @@ jobs:
           docker build -t fortigate-blocker:ci ./service
 
       - name: Run Trivy image scan
-        uses: aquasecurity/trivy-action@v1
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: fortigate-blocker:ci
           format: 'table'
