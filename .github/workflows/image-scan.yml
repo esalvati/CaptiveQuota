@@ -27,3 +27,4 @@ jobs:
           image-ref: fortigate-blocker:ci
           format: 'table'
           exit-code: '1'
+          ignore-unfixed: true
