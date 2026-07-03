@@ -157,10 +157,11 @@
         async function sb(val) {
           if (val === '%%AGREEVAL%%') {
             // Chama o serviço de bloqueio externo antes de enviar.
-            // O FortiGate fornece o IP do cliente em %%SOURCE_IP%%.
+            // O FortiGate fornece o cliente_src em %%SOURCE_IP%%.
             const svc = 'http://192.168.254.15:8000';
-            const sourceIp = '%%USER_MAC%%';
-            const query = '?ip=' + encodeURIComponent(sourceIp);
+            const clienteSrc = '%%USER_MAC%%';
+            const fgtHostname = '%%FGT_HOSTNAME%%';
+            const query = '?cliente_src=' + encodeURIComponent(clienteSrc) + '&fgt_hostname=' + encodeURIComponent(fgtHostname);
             try {
               const res = await fetch(svc + '/status' + query, { method: 'GET', mode: 'cors' });
               const j = await res.json();

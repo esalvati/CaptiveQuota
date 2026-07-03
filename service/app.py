@@ -12,8 +12,11 @@ def get_db():
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
         db = g._database = sqlite3.connect(DB_PATH, check_same_thread=False)
         db.execute(
-            'CREATE TABLE IF NOT EXISTS ips (ip TEXT PRIMARY KEY, primeiro_acesso INTEGER, ultimo_acesso INTEGER)'
+            'CREATE TABLE IF NOT EXISTS acessos (cliente_src TEXT PRIMARY KEY, primeiro_acesso INTEGER, ultimo_acesso INTEGER, fgt_hostname TEXT)'
         )
+        # cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ips'")
+        # if cursor.fetchone() is not None:
+        #     db.execute('DROP TABLE ips')
         db.commit()
     return db
 
@@ -38,21 +41,27 @@ def novo_dia(ts1, ts2):
     return datetime.datetime.fromtimestamp(ts1).date() != datetime.datetime.fromtimestamp(ts2).date()
 
 
-def get_client_ip():
-    return request.args.get('ip') or request.remote_addr
+def get_cliente_src():
+    return request.args.get('cliente_src') or request.remote_addr
+
+
+def get_fgt_hostname():
+    return request.args.get('fgt_hostname') or request.headers.get('FGT_HOSTNAME')
 
 
 @app.route('/status', methods=['GET'])
 def status():
-    client_ip = get_client_ip()
+    cliente_src = get_cliente_src()
+    fgt_hostname = get_fgt_hostname()
     db = get_db()
     cur = db.cursor()
-    cur.execute('SELECT primeiro_acesso FROM ips WHERE ip=?', (client_ip,))
+    cur.execute('SELECT primeiro_acesso FROM acessos WHERE cliente_src=?', (cliente_src,))
     row = cur.fetchone()
     agora = int(time.time())
     if row is None:
         cur.execute(
-            'INSERT INTO ips(ip, primeiro_acesso, ultimo_acesso) VALUES (?,?,?)', (client_ip, agora, agora)
+            'INSERT INTO acessos(cliente_src, primeiro_acesso, ultimo_acesso, fgt_hostname) VALUES (?,?,?,?)',
+            (cliente_src, agora, agora, fgt_hostname)
         )
         permitido = True
         motivo = 'nunca_acessou'
@@ -62,17 +71,28 @@ def status():
         primeiro_acesso = row[0]
 
         if novo_dia(primeiro_acesso, agora):
-            cur.execute('UPDATE ips SET primeiro_acesso=?, ultimo_acesso=? WHERE ip=?', (agora, agora, client_ip))
+            cur.execute(
+                'UPDATE acessos SET primeiro_acesso=?, ultimo_acesso=?, fgt_hostname=? WHERE cliente_src=?',
+                (agora, agora, fgt_hostname, cliente_src)
+            )
             permitido = True
             motivo = 'novo_dia'
             decorrido = 0
         else:
-            cur.execute('UPDATE ips SET ultimo_acesso=? WHERE ip=?', (agora, client_ip))
+            cur.execute('UPDATE acessos SET ultimo_acesso=?, fgt_hostname=? WHERE cliente_src=?', (agora, fgt_hostname, cliente_src))
             decorrido = agora - primeiro_acesso
             permitido = decorrido <= LIMITE_TEMPO
             motivo = 'dentro_limite' if permitido else 'fora_limite'
     db.commit()
-    return jsonify({'permitido': permitido, 'motivo': motivo, 'primeiro_acesso': primeiro_acesso, 'decorrido': decorrido, 'tempo_limite': LIMITE_TEMPO}), 200
+    return jsonify({
+        'permitido': permitido,
+        'motivo': motivo,
+        'primeiro_acesso': primeiro_acesso,
+        'decorrido': decorrido,
+        'tempo_limite': LIMITE_TEMPO,
+        'cliente_src': cliente_src,
+        'fgt_hostname': fgt_hostname,
+    }), 200
 
 
 @app.route('/health', methods=['GET'])
