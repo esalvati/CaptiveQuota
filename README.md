@@ -13,11 +13,11 @@ podman run --rm -p 8000:8000 -v "$(pwd)/data:/data" fortigate-blocker:latest
 
 Endpoints:
 - `GET /status`
-	- registra ou atualiza a sessão do cliente (usa o IP da requisição se `?ip=` não for fornecido).
-	- retorna JSON `{permitido: true|false, motivo, primeiro_acesso, decorrido, tempo_limite}`.
+	- registra ou atualiza a sessão do cliente (usa `cliente_src` se fornecido, caso contrário usa o endereço remoto da requisição).
+	- retorna JSON `{permitido: true|false, motivo, primeiro_acesso, decorrido, tempo_limite, cliente_src, fgt_hostname}`.
 - `GET /health`
 	- retorna `ok`.
 
 Nota de integração:
-Substitua `%%BLOCKER_URL%%` na página de disclaimer pela URL pública deste serviço (por exemplo `https://auth.example.com`).\
-A página de termo de consentimento deve passar o IP fornecido pelo FortiGate como `?ip=%%SOURCE_IP%%` para `/status`, para que o serviço rastreie o endereço correto do cliente.
+Substitua `%%BLOCKER_URL%%` na página de disclaimer pela URL pública deste serviço (por exemplo `https://auth.example.com`).\\
+A página de termo de consentimento deve passar o identificador do cliente e o hostname do FortiGate como `?cliente_src=%%SOURCE_IP%%&fgt_hostname=%%FGT_HOSTNAME%%` para `/status`, para que o serviço rastreie corretamente o cliente e o host FortiGate.
