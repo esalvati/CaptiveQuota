@@ -9,4 +9,6 @@ COPY app.py ./
 VOLUME ["/data"]
 EXPOSE 8000
 
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--workers", "1"]
+ENV LOG_LEVEL=info
+
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--workers", "1", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "--capture-output"]

@@ -11,6 +11,20 @@ mkdir -p data
 podman run --rm -p 8000:8000 -v "$(pwd)/data:/data" fortigate-blocker:latest
 ```
 
+Logs:
+- O contêiner agora emite `access logs` e `error logs` do Gunicorn para stdout/stderr.
+- Para acompanhar os logs em tempo real:
+
+```bash
+podman logs -f <container_id>
+```
+
+- Para aumentar a verbosidade dos logs da aplicação Flask:
+
+```bash
+podman run --rm -p 8000:8000 -v "$(pwd)/data:/data" -e LOG_LEVEL=DEBUG fortigate-blocker:latest
+```
+
 Endpoints:
 - `GET /status`
 	- registra ou atualiza a sessão do cliente (usa `cliente_src` se fornecido, caso contrário usa o endereço remoto da requisição).

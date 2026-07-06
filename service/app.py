@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, g
 import sqlite3
 import time
 import os
+import logging
 
 DB_PATH = os.environ.get('DB_PATH', '/data/data.db')
 LIMITE_TEMPO = 2 * 60 * 60 # 2 horas em segundos
@@ -22,6 +23,21 @@ def get_db():
 
 app = Flask(__name__)
 
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+app.logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+
+# Reuse Gunicorn handlers when running behind Gunicorn so logs are emitted uniformly.
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    if gunicorn_logger.handlers:
+        app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level or getattr(logging, LOG_LEVEL, logging.INFO))
+
+
+@app.before_request
+def start_timer():
+    g.request_start = time.time()
+
 @app.teardown_appcontext
 def close_db(exc):
     db = getattr(g, '_database', None)
@@ -30,6 +46,18 @@ def close_db(exc):
 
 @app.after_request
 def add_cors_headers(response):
+    duration_ms = int((time.time() - getattr(g, 'request_start', time.time())) * 1000)
+    app.logger.info(
+        '%s %s %s %s %sms ip=%s ua="%s"',
+        request.method,
+        request.path,
+        response.status_code,
+        request.query_string.decode('utf-8', errors='replace') if request.query_string else '-',
+        duration_ms,
+        request.headers.get('X-Forwarded-For', request.remote_addr),
+        request.headers.get('User-Agent', '-')
+    )
+
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
@@ -84,6 +112,14 @@ def status():
             permitido = decorrido <= LIMITE_TEMPO
             motivo = 'dentro_limite' if permitido else 'fora_limite'
     db.commit()
+    app.logger.info(
+        'status_result cliente_src=%s fgt_hostname=%s permitido=%s motivo=%s decorrido=%s',
+        cliente_src,
+        fgt_hostname,
+        permitido,
+        motivo,
+        decorrido
+    )
     return jsonify({
         'permitido': permitido,
         'motivo': motivo,
