@@ -9,6 +9,6 @@ COPY app.py ./
 VOLUME ["/data"]
 EXPOSE 8000
 
-ENV LOG_LEVEL=info
+ENV LOG_LEVEL=debug
 
-ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--workers", "1", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "--capture-output"]
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--workers", "1", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "debug", "--capture-output"]
