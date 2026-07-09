@@ -3,6 +3,7 @@ import sqlite3
 import time
 import os
 import logging
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 DB_PATH = os.environ.get('DB_PATH', '/data/data.db')
 LIMITE_TEMPO = 2 * 60 * 60 # 2 horas em segundos
@@ -22,6 +23,17 @@ def get_db():
     return db
 
 app = Flask(__name__)
+
+REQUEST_COUNT = Counter(
+    'captivequota_http_requests_total',
+    'Total HTTP requests processed by CaptiveQuota.',
+    ['method', 'path', 'status']
+)
+REQUEST_LATENCY = Histogram(
+    'captivequota_http_request_duration_seconds',
+    'HTTP request latency in seconds for CaptiveQuota.',
+    ['method', 'path']
+)
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
 app.logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
@@ -46,7 +58,10 @@ def close_db(exc):
 
 @app.after_request
 def add_cors_headers(response):
-    duration_ms = int((time.time() - getattr(g, 'request_start', time.time())) * 1000)
+    duration = time.time() - getattr(g, 'request_start', time.time())
+    duration_ms = int(duration * 1000)
+    REQUEST_COUNT.labels(request.method, request.path, str(response.status_code)).inc()
+    REQUEST_LATENCY.labels(request.method, request.path).observe(duration)
     app.logger.info(
         '%s %s %s %s %sms ip=%s ua="%s"',
         request.method,
@@ -134,6 +149,11 @@ def status():
 @app.route('/health', methods=['GET'])
 def health():
     return 'ok', 200
+
+
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 
 if __name__ == '__main__':
