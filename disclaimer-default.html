@@ -155,6 +155,11 @@
       </form>
       <script>
         async function sb(val) {
+          const submitAnswer = (answer) => {
+            document.forms[0].%%ANSWERID%%.value = answer;
+            document.forms[0].submit();
+          };
+
           if (val === '%%AGREEVAL%%') {
             // Chama o serviço de bloqueio externo antes de enviar.
             // O FortiGate fornece o cliente_src em %%SOURCE_IP%%.
@@ -162,26 +167,34 @@
             const clienteSrc = '%%USER_MAC%%';
             const fgtHostname = '%%FGT_HOSTNAME%%';
             const query = '?cliente_src=' + encodeURIComponent(clienteSrc) + '&fgt_hostname=' + encodeURIComponent(fgtHostname);
+            const controller = new AbortController();
+            const timeoutMs = 4000;
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             try {
-              const res = await fetch(svc + '/status' + query, { method: 'GET', mode: 'cors' });
+              const res = await fetch(svc + '/status' + query, {
+                method: 'GET',
+                mode: 'cors',
+                signal: controller.signal
+              });
+              if (!res.ok) {
+                throw new Error('Blocker service returned status ' + res.status);
+              }
               const j = await res.json();
               if (j.permitido) {
-                document.forms[0].%%ANSWERID%%.value = val;
-                document.forms[0].submit();
+                submitAnswer(val);
               } else {
                 document.querySelector('.message-container').innerHTML = '<h2 style="color:#c0392b">Acesso Bloqueado</h2><p>Seu acesso excedeu o limite de 2 horas para hoje.</p>';
-                document.forms[0].%%ANSWERID%%.value = '%%DECLINEVAL%%';
-                document.forms[0].submit();
+                submitAnswer('%%DECLINEVAL%%');
               }
             } catch (e) {
               // Em caso de erro, submete o formulário como fallback para não bloquear o usuário por falha do serviço
               console.error('Blocker service error:', e);
-              document.forms[0].%%ANSWERID%%.value = val;
-              document.forms[0].submit();
+              submitAnswer(val);
+            } finally {
+              clearTimeout(timeoutId);
             }
           } else {
-            document.forms[0].%%ANSWERID%%.value = val;
-            document.forms[0].submit();
+            submitAnswer(val);
           }
         }
       </script>
