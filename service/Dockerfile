@@ -11,4 +11,4 @@ EXPOSE 8000
 
 ENV LOG_LEVEL=debug
 
-ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--workers", "1", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "debug", "--capture-output"]
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8000", "app:app", "--worker-class", "gthread", "--workers", "1", "--threads", "8", "--timeout", "60", "--graceful-timeout", "30", "--keep-alive", "5", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "debug", "--capture-output"]

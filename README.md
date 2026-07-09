@@ -13,6 +13,7 @@ podman run --rm -p 8000:8000 -v "$(pwd)/data:/data" fortigate-blocker:latest
 
 Logs:
 - O contêiner agora emite `access logs` e `error logs` do Gunicorn para stdout/stderr.
+- A imagem usa Gunicorn com `gthread` e `8` threads para reduzir impacto de conexões lentas/incompletas (erro `Error handling request (no URI read)`), evitando bloquear o único worker em `recv()`.
 - Para acompanhar os logs em tempo real:
 
 ```bash
@@ -24,6 +25,11 @@ podman logs -f <container_id>
 ```bash
 podman run --rm -p 8000:8000 -v "$(pwd)/data:/data" -e LOG_LEVEL=DEBUG fortigate-blocker:latest
 ```
+
+Se ainda aparecer `WORKER TIMEOUT`, verifique também:
+- limites de memória do contêiner/host (mensagem `Perhaps out of memory?`),
+- sondas/health checks de origem externa abrindo conexão sem enviar request HTTP completo,
+- necessidade de aumentar `--timeout` conforme latência real da rede.
 
 Endpoints:
 - `GET /status`
