@@ -155,46 +155,75 @@
       </form>
       <script>
         async function sb(val) {
-          const submitAnswer = (answer) => {
-            document.forms[0].%%ANSWERID%%.value = answer;
-            document.forms[0].submit();
-          };
-
           if (val === '%%AGREEVAL%%') {
-            // Chama o serviço de bloqueio externo antes de enviar.
-            // O FortiGate fornece o cliente_src em %%SOURCE_IP%%.
-            const svc = 'http://192.168.254.15:8000';
+            const svc = 'http://HOST:8000';
             const clienteSrc = '%%USER_MAC%%';
-            const fgtHostname = '%%FGT_HOSTNAME%%';
+            const fgtHostname = \'$(hostname)\';
             const query = '?cliente_src=' + encodeURIComponent(clienteSrc) + '&fgt_hostname=' + encodeURIComponent(fgtHostname);
-            const controller = new AbortController();
-            const timeoutMs = 4000;
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            
             try {
+              // Define um limite de espera de 2 segundos para evitar que o usuário fique travado na tela
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 2000);
+              
               const res = await fetch(svc + '/status' + query, {
                 method: 'GET',
                 mode: 'cors',
                 signal: controller.signal
-              });
-              if (!res.ok) {
-                throw new Error('Blocker service returned status ' + res.status);
               }
-              const j = await res.json();
-              if (j.permitido) {
-                submitAnswer(val);
-              } else {
-                document.querySelector('.message-container').innerHTML = '<h2 style="color:#c0392b">Acesso Bloqueado</h2><p>Seu acesso excedeu o limite de 2 horas para hoje.</p>';
-                submitAnswer('%%DECLINEVAL%%');
-              }
-            } catch (e) {
-              // Em caso de erro, submete o formulário como fallback para não bloquear o usuário por falha do serviço
-              console.error('Blocker service error:', e);
-              submitAnswer(val);
-            } finally {
+                                     );
+              
               clearTimeout(timeoutId);
+              
+              // Falha no banco: Vai gerar HTTP 500. 
+              // Este bloco detecta isso e força a ida para o 'catch' imediatamente.
+              if (!res.ok) {
+                throw new Error('O retorno foi erro HTTP: ' + res.status);
+              }
+              
+              const j = await res.json();
+              
+              // A API retornou 200, mas o JSON veio corrompid ou vazio:
+              if (!j || typeof j.permitido === 'undefined') {
+                throw new Error('A resposta JSON é inválida.');
+              }
+              
+              // Se a API respondeu perfeitamente e o banco funcionou
+              if (j.permitido === true || j.permitido === 'true') {
+                document.forms[0].answer.value = val;
+                document.forms[0].submit();
+              }
+              
+              else {
+                // Bloqueio (usuário estourou as 2h)
+                document.querySelector('.message-container').innerHTML = `
+                <div style="text-align:center;">
+                  <div style="background:url(%%IMAGE:LogoArgenta%%) no-repeat center center; background-size:contain; height:120px; margin-bottom:20px;"></div>
+                  <h1 style="color:#c0392b;">Tempo Excedido!</h1>
+                  <p>O seu limite de 2 horas de uso permitido de acesso a internet para o dia de hoje foi atingido.</p>
+      </div>`;
+                  
+                  document.forms[0].answer.value = '%%DECLINEVAL%%';
+                document.forms[0].submit();
+              }
             }
-          } else {
-            submitAnswer(val);
+            
+            catch (e) {
+              // Contingência (FAIL-OPEN):
+              // Se o container cair, se o banco falhar (HTTP 500) ou se der timeout.
+              console.error('Bypass acionado devido a falha na infraestrutura:', e);
+              
+              document.forms[0].answer.value = val;
+              // Mantém o valor 'Sim' (%%AGREEVAL%%)
+              document.forms[0].submit();
+              //Libera a navegação do usuário
+            }
+          }
+          
+          else {
+            // Se o usuário clicar em "Não"
+            document.forms[0].answer.value = val;
+            document.forms[0].submit();
           }
         }
       </script>
